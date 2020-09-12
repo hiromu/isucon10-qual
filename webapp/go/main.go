@@ -714,7 +714,7 @@ func postEstate(c echo.Context) error {
 			return c.NoContent(http.StatusBadRequest)
 		}
 
-		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,?,?,?,?,?)")
+		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,Point(?,?),?,?,?,?,?)")
 
 		valueArgs = append(valueArgs, id)
 		valueArgs = append(valueArgs, name)
@@ -723,13 +723,15 @@ func postEstate(c echo.Context) error {
 		valueArgs = append(valueArgs, address)
 		valueArgs = append(valueArgs, latitude)
 		valueArgs = append(valueArgs, longitude)
+		valueArgs = append(valueArgs, latitude)
+		valueArgs = append(valueArgs, longitude)
 		valueArgs = append(valueArgs, rent)
 		valueArgs = append(valueArgs, doorHeight)
 		valueArgs = append(valueArgs, doorWidth)
 		valueArgs = append(valueArgs, features)
 		valueArgs = append(valueArgs, popularity)
 	}
-	smt := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES %s"
+	smt := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, coordinate, rent, door_height, door_width, features, popularity) VALUES %s"
 	smt = fmt.Sprintf(smt, strings.Join(valueStrings, ","))
 	smtIns, err := db.Prepare(smt)
 	if err != nil {
@@ -940,7 +942,7 @@ func searchEstateNazotte(c echo.Context) error {
 	query := fmt.Sprintf(
 		"SELECT * FROM estate " +
 		"WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? AND " +
-		"ST_Contains(ST_PolygonFromText(%s), Point(latitude, longitude)) " +
+		"ST_Contains(ST_PolygonFromText(%s), coordinate) " +
 		"ORDER BY popularity DESC, id ASC", coordinates.coordinatesToText())
 	err = db.Select(&estatesInPolygon, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
 	if err == sql.ErrNoRows {
