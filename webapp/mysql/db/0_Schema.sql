@@ -16,6 +16,8 @@ CREATE TABLE isuumo.estate
     rent        INTEGER             NOT NULL,
     door_height INTEGER             NOT NULL,
     door_width  INTEGER             NOT NULL,
+    door_min    INTEGER             NOT NULL,
+    door_max    INTEGER             NOT NULL,
     features    VARCHAR(64)         NOT NULL,
     features_bit BIGINT NOT NULL,
     popularity  INTEGER             NOT NULL,
