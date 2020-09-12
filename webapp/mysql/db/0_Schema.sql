@@ -21,7 +21,9 @@ CREATE TABLE isuumo.estate
     features    VARCHAR(64)         NOT NULL,
     features_bit BIGINT NOT NULL,
     popularity  INTEGER             NOT NULL,
-    PRIMARY KEY (rent, id)
+    PRIMARY KEY (rent, id),
+    INDEX door_min_index door_min,
+    INDEX door_max_index door_max,
 );
 
 
