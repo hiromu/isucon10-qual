@@ -6,7 +6,7 @@ DROP TABLE IF EXISTS isuumo.chair;
 
 CREATE TABLE isuumo.estate
 (
-    id          INTEGER             NOT NULL PRIMARY KEY,
+    id          INTEGER             NOT NULL UNIQUE,
     name        VARCHAR(64)         NOT NULL,
     description VARCHAR(4096)       NOT NULL,
     thumbnail   VARCHAR(128)        NOT NULL,
@@ -18,12 +18,14 @@ CREATE TABLE isuumo.estate
     door_width  INTEGER             NOT NULL,
     features    VARCHAR(64)         NOT NULL,
     popularity  INTEGER             NOT NULL,
-    INDEX idx_01 (rent, id)
+    PRIMARY KEY (rent, id)
 );
+
+
 
 CREATE TABLE isuumo.chair
 (
-    id          INTEGER         NOT NULL PRIMARY KEY,
+    id          INTEGER         NOT NULL UNIQUE,
     name        VARCHAR(64)     NOT NULL,
     description VARCHAR(4096)   NOT NULL,
     thumbnail   VARCHAR(128)    NOT NULL,
@@ -36,5 +38,5 @@ CREATE TABLE isuumo.chair
     kind        VARCHAR(64)     NOT NULL,
     popularity  INTEGER         NOT NULL,
     stock       INTEGER         NOT NULL,
-    INDEX idx_01 (price, id)
+    PRIMARY KEY (price, id)
 );
