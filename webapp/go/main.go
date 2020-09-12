@@ -779,6 +779,9 @@ func postEstate(c echo.Context) error {
 				c.Logger().Errorf("failed: %v", err)
 				return c.NoContent(http.StatusInternalServerError)
 			}
+
+			valueStrings = []string{}
+			valueArgs = []interface{}{}
 		}
 	}
 	if len(valueStrings) > 0 {
