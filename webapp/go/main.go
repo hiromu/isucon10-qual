@@ -72,8 +72,6 @@ type Estate struct {
 	Rent        int64   `db:"rent" json:"rent"`
 	DoorHeight  int64   `db:"door_height" json:"doorHeight"`
 	DoorWidth   int64   `db:"door_width" json:"doorWidth"`
-	DoorMin     int64   `db:"door_min" json:"-"`
-	DoorMax     int64   `db:"door_max" json:"-"`
 	Features    string  `db:"features" json:"features"`
 	FeaturesBit int64  `db:"features_bit" json:"-"`
 	Popularity  int64   `db:"popularity" json:"-"`
@@ -729,12 +727,7 @@ func postEstate(c echo.Context) error {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-
-		doorMin, doorMax := doorWidth, doorHeight
-		if (doorMin > doorMax) {
-			doorMin, doorMax = doorHeight, doorWidth
-		}
+		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,?,?,?,?,?,?)")
 
 		valueArgs = append(valueArgs, id)
 		valueArgs = append(valueArgs, name)
@@ -746,13 +739,11 @@ func postEstate(c echo.Context) error {
 		valueArgs = append(valueArgs, rent)
 		valueArgs = append(valueArgs, doorHeight)
 		valueArgs = append(valueArgs, doorWidth)
-		valueArgs = append(valueArgs, doorMin)
-		valueArgs = append(valueArgs, doorMax)
 		valueArgs = append(valueArgs, features)
 		valueArgs = append(valueArgs, feature_num)
 		valueArgs = append(valueArgs, popularity)
 	}
-	smt := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, door_min, door_max, features, features_bit, popularity) VALUES %s"
+	smt := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, features_bit, popularity) VALUES %s"
 	smt = fmt.Sprintf(smt, strings.Join(valueStrings, ","))
 	smtIns, err := db.Prepare(smt)
 	if err != nil {
@@ -927,8 +918,10 @@ func searchRecommendedEstateWithChair(c echo.Context) error {
 	vars := []int64{ w, h, d }
 	sort.Slice(vars, func(i, j int) bool { return vars[i] < vars[j] })
 
-	query = `SELECT * FROM estate WHERE door_min >= ? AND door_max >= ? ORDER BY popularity DESC, id ASC LIMIT ?`
-	err = db.Select(&estates, query, vars[0], vars[1], Limit)
+
+	query = `SELECT * FROM estate WHERE (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) ORDER BY popularity DESC, id ASC LIMIT ?`
+	// query = `SELECT * FROM estate WHERE LEAST(door_width, door_height) >= ? AND GREATEST(door_width, door_height) >= ? ORDER BY popularity DESC, id ASC LIMIT ?`
+	err = db.Select(&estates, query, vars[0], vars[1], vars[1], vars[0], Limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
