@@ -45,6 +45,7 @@ type Chair struct {
 	Depth       int64  `db:"depth" json:"depth"`
 	Color       string `db:"color" json:"color"`
 	Features    string `db:"features" json:"features"`
+	FeaturesBit int64  `db:"features_bit" json:"-"`
 	Kind        string `db:"kind" json:"kind"`
 	Popularity  int64  `db:"popularity" json:"-"`
 	Stock       int64  `db:"stock" json:"-"`
@@ -72,6 +73,7 @@ type Estate struct {
 	DoorHeight  int64   `db:"door_height" json:"doorHeight"`
 	DoorWidth   int64   `db:"door_width" json:"doorWidth"`
 	Features    string  `db:"features" json:"features"`
+	FeaturesBit int64  `db:"features_bit" json:"-"`
 	Popularity  int64   `db:"popularity" json:"-"`
 }
 
@@ -216,6 +218,15 @@ func getEnv(key, defaultValue string) string {
 		return val
 	}
 	return defaultValue
+}
+
+func indexOf(element string, data []string) (int) {
+   for k, v := range data {
+       if element == v {
+           return k
+       }
+   }
+   return -1
 }
 
 //ConnectDB isuumoデータベースに接続する
@@ -383,13 +394,20 @@ func postChair(c echo.Context) error {
 		kind := rm.NextString()
 		popularity := rm.NextInt()
 		stock := rm.NextInt()
+
+		var feature_num int64
+		for _, feature := range strings.Split(features, ",") {
+			if feature != "" {
+				feature_num += (1 << indexOf(feature, chairSearchCondition.Feature.List))
+			}
+		}
+
 		if err := rm.Err(); err != nil {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
+		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
 
-		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,?,?,?,?,?,?)")
-	
 		valueArgs = append(valueArgs, id)
 		valueArgs = append(valueArgs, name)
 		valueArgs = append(valueArgs, description)
@@ -400,11 +418,12 @@ func postChair(c echo.Context) error {
 		valueArgs = append(valueArgs, depth)
 		valueArgs = append(valueArgs, color)
 		valueArgs = append(valueArgs, features)
+		valueArgs = append(valueArgs, feature_num)
 		valueArgs = append(valueArgs, kind)
 		valueArgs = append(valueArgs, popularity)
 		valueArgs = append(valueArgs, stock)
 	}
-	smt := "INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES %s"
+	smt := "INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, features_bit, kind, popularity, stock) VALUES %s"
 	smt = fmt.Sprintf(smt, strings.Join(valueStrings, ","))
 	smtIns, err := db.Prepare(smt)
 	if err != nil {
@@ -505,8 +524,8 @@ func searchChairs(c echo.Context) error {
 
 	if c.QueryParam("features") != "" {
 		for _, f := range strings.Split(c.QueryParam("features"), ",") {
-			conditions = append(conditions, "features LIKE CONCAT('%', ?, '%')")
-			params = append(params, f)
+			conditions = append(conditions, "(features_bit & (1 << ?))")
+			params = append(params, indexOf(f, chairSearchCondition.Feature.List))
 		}
 	}
 
@@ -580,34 +599,21 @@ func buyChair(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	tx, err := db.Beginx()
-	if err != nil {
-		c.Echo().Logger.Errorf("failed to create transaction : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
-
-	var chair Chair
-	err = tx.QueryRowx("SELECT * FROM chair WHERE id = ? AND stock > 0 FOR UPDATE", id).StructScan(&chair)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			c.Echo().Logger.Infof("buyChair chair id \"%v\" not found", id)
-			return c.NoContent(http.StatusNotFound)
-		}
-		c.Echo().Logger.Errorf("DB Execution Error: on getting a chair by id : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
-	_, err = tx.Exec("UPDATE chair SET stock = stock - 1 WHERE id = ?", id)
+	res, err := db.Exec("UPDATE chair SET stock = stock - 1 WHERE id = ? AND stock > 0", id)
 	if err != nil {
 		c.Echo().Logger.Errorf("chair stock update failed : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		c.Echo().Logger.Errorf("transaction commit error : %v", err)
+	count, err2 := res.RowsAffected()  
+	if err2 != nil {
+		c.Echo().Logger.Errorf("buyChair RowsAffected get faeild : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	if count == 0 {
+		c.Echo().Logger.Infof("buyChair chair id \"%v\" not found", id)
+		return c.NoContent(http.StatusNotFound)
 	}
 
 	return c.NoContent(http.StatusOK)
@@ -709,12 +715,20 @@ func postEstate(c echo.Context) error {
 		doorWidth := rm.NextInt()
 		features := rm.NextString()
 		popularity := rm.NextInt()
+
+		var feature_num int64
+		for _, feature := range strings.Split(features, ",") {
+			if feature != "" {
+				feature_num += (1 << indexOf(feature, estateSearchCondition.Feature.List))
+			}
+		}
+
 		if err := rm.Err(); err != nil {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
 
-		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,Point(?,?),?,?,?,?,?)")
+		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,Point(?,?),?,?,?,?,?,?)")
 
 		valueArgs = append(valueArgs, id)
 		valueArgs = append(valueArgs, name)
@@ -729,9 +743,10 @@ func postEstate(c echo.Context) error {
 		valueArgs = append(valueArgs, doorHeight)
 		valueArgs = append(valueArgs, doorWidth)
 		valueArgs = append(valueArgs, features)
+		valueArgs = append(valueArgs, feature_num)
 		valueArgs = append(valueArgs, popularity)
 	}
-	smt := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, coordinate, rent, door_height, door_width, features, popularity) VALUES %s"
+	smt := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, coordinate, rent, door_height, door_width, features, features_bit, popularity) VALUES %s"
 	smt = fmt.Sprintf(smt, strings.Join(valueStrings, ","))
 	smtIns, err := db.Prepare(smt)
 	if err != nil {
@@ -805,8 +820,8 @@ func searchEstates(c echo.Context) error {
 
 	if c.QueryParam("features") != "" {
 		for _, f := range strings.Split(c.QueryParam("features"), ",") {
-			conditions = append(conditions, "features like concat('%', ?, '%')")
-			params = append(params, f)
+			conditions = append(conditions, "(features_bit & (1 << ?))")
+			params = append(params, indexOf(f, estateSearchCondition.Feature.List))
 		}
 	}
 
@@ -942,8 +957,9 @@ func searchEstateNazotte(c echo.Context) error {
 	query := fmt.Sprintf(
 		"SELECT * FROM estate " +
 		"WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? AND " +
-		"ST_Contains(ST_PolygonFromText(%s), coordinate) " +
-		"ORDER BY popularity DESC, id ASC", coordinates.coordinatesToText())
+		"ST_Contains(ST_PolygonFromText(%s), Point(latitude, longitude)) " +
+		"ORDER BY popularity DESC, id ASC " +
+		"LIMIT 50", coordinates.coordinatesToText())
 	err = db.Select(&estatesInPolygon, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
 	if err == sql.ErrNoRows {
 		c.Echo().Logger.Infof("select * from estate where latitude ...", err)
@@ -956,12 +972,7 @@ func searchEstateNazotte(c echo.Context) error {
 	}
 
 	var re EstateSearchResponse
-	re.Estates = []Estate{}
-	if len(estatesInPolygon) > NazotteLimit {
-		re.Estates = estatesInPolygon[:NazotteLimit]
-	} else {
-		re.Estates = estatesInPolygon
-	}
+	re.Estates = estatesInPolygon
 	re.Count = int64(len(re.Estates))
 
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
