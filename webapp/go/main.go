@@ -40,9 +40,13 @@ type Chair struct {
 	Description string `db:"description" json:"description"`
 	Thumbnail   string `db:"thumbnail" json:"thumbnail"`
 	Price       int64  `db:"price" json:"price"`
+	PriceClass  int64   `db:"price_class" json:"-"`
 	Height      int64  `db:"height" json:"height"`
+	HeightClass int64   `db:"height_class" json:"-"`
 	Width       int64  `db:"width" json:"width"`
+	WidthClass  int64   `db:"width_class" json:"-"`
 	Depth       int64  `db:"depth" json:"depth"`
+	DepthClass  int64   `db:"depth_class" json:"-"`
 	Color       string `db:"color" json:"color"`
 	Features    string `db:"features" json:"features"`
 	FeaturesBit int64  `db:"features_bit" json:"-"`
@@ -70,8 +74,11 @@ type Estate struct {
 	Longitude   float64 `db:"longitude" json:"longitude"`
 	Address     string  `db:"address" json:"address"`
 	Rent        int64   `db:"rent" json:"rent"`
+	RentClass   int64   `db:"rent_class" json:"-"`
 	DoorHeight  int64   `db:"door_height" json:"doorHeight"`
+	DoorHeightClass   int64   `db:"door_height_class" json:"-"`
 	DoorWidth   int64   `db:"door_width" json:"doorWidth"`
+	DoorWidthClass   int64   `db:"door_width_class" json:"-"`
 	Features    string  `db:"features" json:"features"`
 	FeaturesBit int64  `db:"features_bit" json:"-"`
 	Popularity  int64   `db:"popularity" json:"-"`
