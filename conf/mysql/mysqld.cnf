@@ -57,6 +57,7 @@ myisam-recover-options  = BACKUP
 #
 # * Query Cache Configuration
 #
+query_cache_type        = 1
 query_cache_limit       = 1M
 query_cache_size        = 16M
 #
