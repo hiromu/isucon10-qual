@@ -68,7 +68,6 @@ type Estate struct {
 	Description string  `db:"description" json:"description"`
 	Latitude    float64 `db:"latitude" json:"latitude"`
 	Longitude   float64 `db:"longitude" json:"longitude"`
-	Coordinate  []uint8 `db:"coordinate" json:"-"`
 	Address     string  `db:"address" json:"address"`
 	Rent        int64   `db:"rent" json:"rent"`
 	DoorHeight  int64   `db:"door_height" json:"doorHeight"`
@@ -728,16 +727,13 @@ func postEstate(c echo.Context) error {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-
-		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,Point(?,?),?,?,?,?,?,?)")
+		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,?,?,?,?,?,?)")
 
 		valueArgs = append(valueArgs, id)
 		valueArgs = append(valueArgs, name)
 		valueArgs = append(valueArgs, description)
 		valueArgs = append(valueArgs, thumbnail)
 		valueArgs = append(valueArgs, address)
-		valueArgs = append(valueArgs, latitude)
-		valueArgs = append(valueArgs, longitude)
 		valueArgs = append(valueArgs, latitude)
 		valueArgs = append(valueArgs, longitude)
 		valueArgs = append(valueArgs, rent)
@@ -747,7 +743,7 @@ func postEstate(c echo.Context) error {
 		valueArgs = append(valueArgs, feature_num)
 		valueArgs = append(valueArgs, popularity)
 	}
-	smt := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, coordinate, rent, door_height, door_width, features, features_bit, popularity) VALUES %s"
+	smt := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, features_bit, popularity) VALUES %s"
 	smt = fmt.Sprintf(smt, strings.Join(valueStrings, ","))
 	smtIns, err := db.Prepare(smt)
 	if err != nil {
@@ -958,7 +954,7 @@ func searchEstateNazotte(c echo.Context) error {
 	query := fmt.Sprintf(
 		"SELECT * FROM estate " +
 		"WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? AND " +
-		"ST_Contains(ST_PolygonFromText(%s), coordinate) " +
+		"ST_Contains(ST_PolygonFromText(%s), Point(latitude, longitude)) " +
 		"ORDER BY popularity DESC, id ASC " +
 		"LIMIT 50", coordinates.coordinatesToText())
 	err = db.Select(&estatesInPolygon, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
