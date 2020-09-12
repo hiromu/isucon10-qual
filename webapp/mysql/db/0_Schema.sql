@@ -19,15 +19,11 @@ CREATE TABLE isuumo.estate
     door_height_class TINYINT       NOT NULL,
     door_width  INTEGER             NOT NULL,
     door_width_class TINYINT        NOT NULL,
-    door_min    INTEGER             NOT NULL,
-    door_max    INTEGER             NOT NULL,
     features    VARCHAR(64)         NOT NULL,
     features_bit BIGINT NOT NULL,
     popularity  INTEGER             NOT NULL,
     PRIMARY KEY (rent, id),
-    INDEX idx_01 (latitude, longitude),
-    INDEX door_min_index (door_min),
-    INDEX door_max_index (door_max)
+    INDEX idx_01 (latitude, longitude)
 );
 
 
