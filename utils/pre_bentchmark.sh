@@ -12,6 +12,8 @@ if [ -f /var/log/mysql/slow.log ]; then
     sudo mv /var/log/mysql/slow.log /var/log/mysql/mysqld-slow.log.$DATE
 fi
 
+cd /home/isucon/isuumo/webapp/go && make && cd -
+
 #sudo systemctl restart apache2
 sudo systemctl restart nginx
 sudo systemctl restart mysql
