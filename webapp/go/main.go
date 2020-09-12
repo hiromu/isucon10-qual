@@ -218,6 +218,43 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
+func indexOf(element string, data []string) (int) {
+   for k, v := range data {
+       if element == v {
+           return k
+       }
+   }
+   return -1
+}
+
+func convertChair(chair Chair) Chair {
+	feature_num, _ := strconv.Atoi(chair.Features)
+	var features []string
+
+	for index, feature := range chairSearchCondition.Feature.List {
+		if feature_num & (1 << index) != 0 {
+			features = append(features, feature)
+		}
+	}
+
+	chair.Features = strings.Join(features, ",")
+	return chair
+}
+
+func convertEstate(estate Estate) Estate {
+	feature_num, _ := strconv.Atoi(estate.Features)
+	var features []string
+
+	for index, feature := range estateSearchCondition.Feature.List {
+		if feature_num & (1 << index) != 0 {
+			features = append(features, feature)
+		}
+	}
+
+	estate.Features = strings.Join(features, ",")
+	return estate
+}
+
 //ConnectDB isuumoデータベースに接続する
 func (mc *MySQLConnectionEnv) ConnectDB() (*sqlx.DB, error) {
 	dsn := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v", mc.User, mc.Password, mc.Host, mc.Port, mc.DBName)
@@ -343,6 +380,8 @@ func getChairDetail(c echo.Context) error {
 		return c.NoContent(http.StatusNotFound)
 	}
 
+	chair = convertChair(chair)
+
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
 	c.Response().WriteHeader(http.StatusOK)
 	return json.NewEncoder(c.Response()).Encode(chair)
@@ -387,11 +426,19 @@ func postChair(c echo.Context) error {
 		kind := rm.NextString()
 		popularity := rm.NextInt()
 		stock := rm.NextInt()
+
+		var feature_num int64
+		for _, feature := range strings.Split(features, ",") {
+			if feature != "" {
+				feature_num += (1 << indexOf(feature, chairSearchCondition.Feature.List))
+			}
+		}
+
 		if err := rm.Err(); err != nil {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		_, err := tx.Exec("INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock)
+		_, err := tx.Exec("INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, price, height, width, depth, color, feature_num, kind, popularity, stock)
 		if err != nil {
 			c.Logger().Errorf("failed to insert chair: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
@@ -488,8 +535,8 @@ func searchChairs(c echo.Context) error {
 
 	if c.QueryParam("features") != "" {
 		for _, f := range strings.Split(c.QueryParam("features"), ",") {
-			conditions = append(conditions, "features LIKE CONCAT('%', ?, '%')")
-			params = append(params, f)
+			conditions = append(conditions, "(features & (1 << ?))")
+			params = append(params, indexOf(f, chairSearchCondition.Feature.List))
 		}
 	}
 
@@ -535,6 +582,10 @@ func searchChairs(c echo.Context) error {
 		}
 		c.Logger().Errorf("searchChairs DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	for index, chair := range chairs {
+		chairs[index] = convertChair(chair)
 	}
 
 	res.Chairs = chairs
@@ -617,6 +668,10 @@ func getLowPricedChair(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	for index, chair := range chairs {
+		chairs[index] = convertChair(chair)
+	}
+
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
 	c.Response().WriteHeader(http.StatusOK)
 	return json.NewEncoder(c.Response()).Encode(ChairListResponse{Chairs: chairs})
@@ -639,6 +694,8 @@ func getEstateDetail(c echo.Context) error {
 		c.Echo().Logger.Errorf("Database Execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+
+	estate = convertEstate(estate)
 
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
 	c.Response().WriteHeader(http.StatusOK)
@@ -696,11 +753,19 @@ func postEstate(c echo.Context) error {
 		doorWidth := rm.NextInt()
 		features := rm.NextString()
 		popularity := rm.NextInt()
+
+		var feature_num int64
+		for _, feature := range strings.Split(features, ",") {
+			if feature != "" {
+				feature_num += (1 << indexOf(feature, estateSearchCondition.Feature.List))
+			}
+		}
+
 		if err := rm.Err(); err != nil {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		_, err := tx.Exec("INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity)
+		_, err := tx.Exec("INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, feature_num, popularity)
 		if err != nil {
 			c.Logger().Errorf("failed to insert estate: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
@@ -770,8 +835,8 @@ func searchEstates(c echo.Context) error {
 
 	if c.QueryParam("features") != "" {
 		for _, f := range strings.Split(c.QueryParam("features"), ",") {
-			conditions = append(conditions, "features like concat('%', ?, '%')")
-			params = append(params, f)
+			conditions = append(conditions, "(features & (1 << ?))")
+			params = append(params, indexOf(f, estateSearchCondition.Feature.List))
 		}
 	}
 
@@ -817,6 +882,9 @@ func searchEstates(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	for index, estate := range estates {
+		estates[index] = convertEstate(estate)
+	}
 	res.Estates = estates
 
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
@@ -837,6 +905,10 @@ func getLowPricedEstate(c echo.Context) error {
 		}
 		c.Logger().Errorf("getLowPricedEstate DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	for index, estate := range estates {
+		estates[index] = convertEstate(estate)
 	}
 
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
@@ -885,6 +957,10 @@ func searchRecommendedEstateWithChair(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	for index, estate := range estates {
+		estates[index] = convertEstate(estate)
+	}
+
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
 	c.Response().WriteHeader(http.StatusOK)
 	return json.NewEncoder(c.Response()).Encode(EstateListResponse{Estates: estates})
@@ -928,6 +1004,10 @@ func searchEstateNazotte(c echo.Context) error {
 		re.Estates = estatesInPolygon
 	}
 	re.Count = int64(len(re.Estates))
+
+	for index, estate := range re.Estates {
+		re.Estates[index] = convertEstate(estate)
+	}
 
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
 	c.Response().WriteHeader(http.StatusOK)
