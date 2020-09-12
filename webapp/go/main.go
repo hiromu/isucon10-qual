@@ -872,8 +872,9 @@ func searchRecommendedEstateWithChair(c echo.Context) error {
 	sort.Slice(vars, func(i, j int) bool { return vars[i] < vars[j] })
 
 
-	query = `SELECT * FROM estate WHERE (door_width >= ? AND door_height >= ?) ORDER BY popularity DESC, id ASC LIMIT ?`
-	err = db.Select(&estates, query, vars[0], vars[1], Limit)
+	query = `SELECT * FROM estate WHERE (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) ORDER BY popularity DESC, id ASC LIMIT ?`
+	// query = `SELECT * FROM estate WHERE LEAST(door_width, door_height) >= ? AND GREATEST(door_width, door_height) >= ? ORDER BY popularity DESC, id ASC LIMIT ?`
+	err = db.Select(&estates, query, vars[0], vars[1], vars[1], vars[0], Limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
