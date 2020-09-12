@@ -22,8 +22,9 @@ CREATE TABLE isuumo.estate
     features_bit BIGINT NOT NULL,
     popularity  INTEGER             NOT NULL,
     PRIMARY KEY (rent, id),
-    INDEX door_min_index door_min,
-    INDEX door_max_index door_max,
+    INDEX idx_01 (latitude, longitude),
+    INDEX door_min_index (door_min),
+    INDEX door_max_index (door_max)
 );
 
 
