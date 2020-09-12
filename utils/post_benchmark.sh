@@ -1,5 +1,8 @@
 #!/bin/bash
 
+sudo chmod 755 /var/log/mysql
+sudo chmod 644 /var/log/mysql/*.log
+
 DATE=`date "+%Y%m%d_%H%M%S"`
 #if [ -f /var/log/apache2/access_log ]; then
 #  cat /var/log/apache2/access_log | kataribe > /tmp/kataribe.apache2.log.$DATE
