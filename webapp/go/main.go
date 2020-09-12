@@ -957,7 +957,7 @@ func searchEstateNazotte(c echo.Context) error {
 	query := fmt.Sprintf(
 		"SELECT * FROM estate " +
 		"WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? AND " +
-		"ST_Contains(ST_PolygonFromText(%s), Point(latitude, longitude)) " +
+		"ST_Contains(ST_PolygonFromText(%s), coordinate) " +
 		"ORDER BY popularity DESC, id ASC " +
 		"LIMIT 50", coordinates.coordinatesToText())
 	err = db.Select(&estatesInPolygon, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
