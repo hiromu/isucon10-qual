@@ -996,15 +996,16 @@ func postEstateRequestDocument(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	estate := Estate{}
-	query := `SELECT * FROM estate WHERE id = ?`
-	err = db.Get(&estate, query, id)
+	query := `SELECT COUNT(*) FROM estate WHERE id = ?`
+	var count int
+	err = db.Get(&count, query, id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return c.NoContent(http.StatusNotFound)
-		}
 		c.Logger().Errorf("postEstateRequestDocument DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	if count == 0 {
+		return c.NoContent(http.StatusNotFound)
 	}
 
 	return c.NoContent(http.StatusOK)
