@@ -928,7 +928,8 @@ func searchEstateNazotte(c echo.Context) error {
 		"SELECT * FROM estate " +
 		"WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? AND " +
 		"ST_Contains(ST_PolygonFromText(%s), Point(latitude, longitude)) " +
-		"ORDER BY popularity DESC, id ASC", coordinates.coordinatesToText())
+		"ORDER BY popularity DESC, id ASC " +
+		"LIMIT 50", coordinates.coordinatesToText())
 	err = db.Select(&estatesInPolygon, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
 	if err == sql.ErrNoRows {
 		c.Echo().Logger.Infof("select * from estate where latitude ...", err)
@@ -941,12 +942,7 @@ func searchEstateNazotte(c echo.Context) error {
 	}
 
 	var re EstateSearchResponse
-	re.Estates = []Estate{}
-	if len(estatesInPolygon) > NazotteLimit {
-		re.Estates = estatesInPolygon[:NazotteLimit]
-	} else {
-		re.Estates = estatesInPolygon
-	}
+	re.Estates = estatesInPolygon
 	re.Count = int64(len(re.Estates))
 
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
