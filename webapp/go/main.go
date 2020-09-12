@@ -413,16 +413,20 @@ func postChair(c echo.Context) error {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
 
 		valueArgs = append(valueArgs, id)
 		valueArgs = append(valueArgs, name)
 		valueArgs = append(valueArgs, description)
 		valueArgs = append(valueArgs, thumbnail)
 		valueArgs = append(valueArgs, price)
+		valueArgs = append(valueArgs, getRangeId(chairSearchCondition.Price, price))
 		valueArgs = append(valueArgs, height)
+		valueArgs = append(valueArgs, getRangeId(chairSearchCondition.Height, height))
 		valueArgs = append(valueArgs, width)
+		valueArgs = append(valueArgs, getRangeId(chairSearchCondition.Width, width))
 		valueArgs = append(valueArgs, depth)
+		valueArgs = append(valueArgs, getRangeId(chairSearchCondition.Depth, depth))
 		valueArgs = append(valueArgs, color)
 		valueArgs = append(valueArgs, features)
 		valueArgs = append(valueArgs, feature_num)
@@ -430,7 +434,7 @@ func postChair(c echo.Context) error {
 		valueArgs = append(valueArgs, popularity)
 		valueArgs = append(valueArgs, stock)
 	}
-	smt := "INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, features_bit, kind, popularity, stock) VALUES %s"
+	smt := "INSERT INTO chair(id, name, description, thumbnail, price, price_class, height, height_class, width, width_class, depth, depth_class, color, features, features_bit, kind, popularity, stock) VALUES %s"
 	smt = fmt.Sprintf(smt, strings.Join(valueStrings, ","))
 	smtIns, err := db.Prepare(smt)
 	if err != nil {
@@ -664,6 +668,15 @@ func getRange(cond RangeCondition, rangeID string) (*Range, error) {
 	return cond.Ranges[RangeIndex], nil
 }
 
+func getRangeId(cond RangeCondition, value int) int64 {
+	for _, r := range cond.Ranges {
+		if (r.Min == -1 || r.Min <= int64(value)) && (r.Max == -1 || r.Max > int64(value)) {
+			return r.ID
+		}
+	}
+	return 0
+}
+
 func postEstate(c echo.Context) error {
 	header, err := c.FormFile("estates")
 	if err != nil {
@@ -710,7 +723,7 @@ func postEstate(c echo.Context) error {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,?,?,?,?,?,?)")
+		valueStrings = append(valueStrings, "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
 
 		valueArgs = append(valueArgs, id)
 		valueArgs = append(valueArgs, name)
@@ -720,13 +733,16 @@ func postEstate(c echo.Context) error {
 		valueArgs = append(valueArgs, latitude)
 		valueArgs = append(valueArgs, longitude)
 		valueArgs = append(valueArgs, rent)
+		valueArgs = append(valueArgs, getRangeId(estateSearchCondition.Rent, rent))
 		valueArgs = append(valueArgs, doorHeight)
+		valueArgs = append(valueArgs, getRangeId(estateSearchCondition.DoorHeight, doorHeight))
 		valueArgs = append(valueArgs, doorWidth)
+		valueArgs = append(valueArgs, getRangeId(estateSearchCondition.DoorWidth, doorWidth))
 		valueArgs = append(valueArgs, features)
 		valueArgs = append(valueArgs, feature_num)
 		valueArgs = append(valueArgs, popularity)
 	}
-	smt := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, features_bit, popularity) VALUES %s"
+	smt := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, rent_class, door_height, door_height_class, door_width, door_width_class, features, features_bit, popularity) VALUES %s"
 	smt = fmt.Sprintf(smt, strings.Join(valueStrings, ","))
 	smtIns, err := db.Prepare(smt)
 	if err != nil {
