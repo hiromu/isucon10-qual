@@ -19,7 +19,8 @@ CREATE TABLE isuumo.estate
     features    VARCHAR(64)         NOT NULL,
     features_bit BIGINT NOT NULL,
     popularity  INTEGER             NOT NULL,
-    PRIMARY KEY (rent, id)
+    PRIMARY KEY (rent, id),
+    INDEX idx_01 (latitude, longitude)
 );
 
 
