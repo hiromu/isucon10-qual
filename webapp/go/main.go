@@ -366,13 +366,6 @@ func postChair(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		c.Logger().Errorf("failed to begin tx: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
-
 	valueStrings := []string{}
 	valueArgs := []interface{}{}
 	for _, row := range records {
@@ -413,9 +406,16 @@ func postChair(c echo.Context) error {
 	}
 	smt := "INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES %s"
 	smt = fmt.Sprintf(smt, strings.Join(valueStrings, ","))
-	_, err = tx.Exec(smt, valueArgs...)
-	if err := tx.Commit(); err != nil {
-		c.Logger().Errorf("failed to commit tx: %v", err)
+	smtIns, err := db.Prepare(smt)
+	if err != nil {
+		c.Logger().Errorf("failed: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	defer smtIns.Close()
+
+	_, err = smtIns.Exec(valueArgs...)
+	if err != nil {
+		c.Logger().Errorf("failed: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	return c.NoContent(http.StatusCreated)
@@ -693,13 +693,6 @@ func postEstate(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		c.Logger().Errorf("failed to begin tx: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
-
 	valueStrings := []string{}
 	valueArgs := []interface{}{}
 	for _, row := range records {
@@ -738,9 +731,16 @@ func postEstate(c echo.Context) error {
 	}
 	smt := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES %s"
 	smt = fmt.Sprintf(smt, strings.Join(valueStrings, ","))
-	_, err = tx.Exec(smt, valueArgs...)
-	if err := tx.Commit(); err != nil {
-		c.Logger().Errorf("failed to commit tx: %v", err)
+	smtIns, err := db.Prepare(smt)
+	if err != nil {
+		c.Logger().Errorf("failed: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	defer smtIns.Close()
+
+	_, err = smtIns.Exec(valueArgs...)
+	if err != nil {
+		c.Logger().Errorf("failed: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	return c.NoContent(http.StatusCreated)
