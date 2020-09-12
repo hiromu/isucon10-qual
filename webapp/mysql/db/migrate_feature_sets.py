@@ -3,10 +3,8 @@ import MySQLdb
 import sys
 
 '''
-alter table estate rename column features to features_str;
-alter table chair rename column features to features_str;
-alter table estate add features bigint after features_str;
-alter table chair add features bigint after features_str;
+alter table estate add features_bit bigint after features;
+alter table chair add features_bit bigint after features;
 '''
 
 
@@ -20,7 +18,7 @@ cf_list = json.load(open(sys.argv[2]))['feature']['list']
 conn = MySQLdb.connect(host='localhost', user='root')
 cur = conn.cursor()
 
-cur.execute('SELECT id, features_str FROM isuumo.estate')
+cur.execute('SELECT id, features FROM isuumo.estate')
 for id_, features in cur.fetchall():
     features = features.split(',')
 
@@ -29,9 +27,9 @@ for id_, features in cur.fetchall():
         if feature:
             feature_num += (1 << ef_list.index(feature))
 
-    cur.execute('UPDATE isuumo.estate SET features = %s WHERE id = %s', (feature_num, id_))
+    cur.execute('UPDATE isuumo.estate SET features_bit = %s WHERE id = %s', (feature_num, id_))
 
-cur.execute('SELECT id, features_str FROM isuumo.chair')
+cur.execute('SELECT id, features FROM isuumo.chair')
 for id_, features in cur.fetchall():
     features = features.split(',')
 
@@ -40,11 +38,6 @@ for id_, features in cur.fetchall():
         if feature:
             feature_num += (1 << cf_list.index(feature))
 
-    cur.execute('UPDATE isuumo.chair SET features = %s WHERE id = %s', (feature_num, id_))
+    cur.execute('UPDATE isuumo.chair SET features_bit = %s WHERE id = %s', (feature_num, id_))
 
 conn.commit()
-
-'''
-alter table estate drop features_str;
-alter table chair drop features_str;
-'''
