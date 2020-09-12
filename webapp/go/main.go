@@ -434,7 +434,7 @@ func postChair(c echo.Context) error {
 		valueArgs = append(valueArgs, popularity)
 		valueArgs = append(valueArgs, stock)
 
-		if len(valueStrings) == 500 {
+		if len(valueStrings) == 50 {
 			smt := "INSERT INTO chair(id, name, description, thumbnail, price, price_class, height, height_class, width, width_class, depth, depth_class, color, features, features_bit, kind, popularity, stock) VALUES %s"
 			smt = fmt.Sprintf(smt, strings.Join(valueStrings, ","))
 			smtIns, err := db.Prepare(smt)
@@ -764,7 +764,7 @@ func postEstate(c echo.Context) error {
 		valueArgs = append(valueArgs, feature_num)
 		valueArgs = append(valueArgs, popularity)
 
-		if len(valueStrings) == 500 {
+		if len(valueStrings) == 50 {
 			smt := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, rent_class, door_height, door_height_class, door_width, door_width_class, features, features_bit, popularity) VALUES %s"
 			smt = fmt.Sprintf(smt, strings.Join(valueStrings, ","))
 			smtIns, err := db.Prepare(smt)
